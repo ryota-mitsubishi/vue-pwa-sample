@@ -1,18 +1,19 @@
 {
   "name": "Push通知デモアプリ",
   "short_name": "PushDemo",
-  "start_url": "/",
+  "start_url": "/vue-pwa-sample/",
+  "scope": "/vue-pwa-sample/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#2196f3",
   "icons": [
     {
-      "src": "icon-192.png",
+      "src": "/vue-pwa-sample/icon-192.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "icon-512.png",
+      "src": "/vue-pwa-sample/icon-512.png",
       "sizes": "512x512",
       "type": "image/png"
     }
