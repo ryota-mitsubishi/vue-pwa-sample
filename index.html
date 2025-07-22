@@ -240,6 +240,7 @@ async function subscribe() {
     }
 }
 
+// 強化されたテスト通知関数（既存のsendTestNotification関数を置き換え）
 async function sendTestNotification() {
     if (!subscription) {
         alert("📩 まず通知を購読してください！");
@@ -248,19 +249,52 @@ async function sendTestNotification() {
 
     const delay = parseInt(document.getElementById('delaySeconds').value) || 5;
     
-    updateStatus(`⏱️ ${delay}秒後にテスト通知を送信します...`, 'info');
+    updateStatus(`⏱️ ${delay}秒後に強化された通知を送信します...`, 'info');
     
     setTimeout(async () => {
         try {
-            // Service Worker経由で通知を表示
             if (serviceWorkerRegistration) {
-                await serviceWorkerRegistration.showNotification(`${delay}秒後のテスト通知`, {
-                    body: `これは${delay}秒後に送られたローカルテスト通知です📲`,
+                // より目立つ通知データを作成
+                const notificationData = {
+                    title: `🚨 ${delay}秒後の重要通知！`,
+                    body: `📲 この通知は${delay}秒後に送信されました。\n🔔 バイブレーションと音で通知します！`,
+                    urgency: 'high'
+                };
+                
+                await serviceWorkerRegistration.showNotification(notificationData.title, {
+                    body: notificationData.body,
                     icon: '/vue-pwa-sample/icon-192.png',
                     badge: '/vue-pwa-sample/icon-192.png',
-                    tag: 'test-notification'
+                    tag: 'enhanced-notification-' + Date.now(),
+                    
+                    // 視認性を最大化
+                    requireInteraction: true,
+                    silent: false,
+                    vibrate: [300, 100, 300, 100, 300], // より長いバイブレーション
+                    urgency: 'high',
+                    
+                    // アクションボタン
+                    actions: [
+                        {
+                            action: 'open',
+                            title: '📱 アプリを開く',
+                            icon: '/vue-pwa-sample/icon-192.png'
+                        },
+                        {
+                            action: 'snooze',
+                            title: '⏰ 後で通知',
+                            icon: '/vue-pwa-sample/icon-192.png'
+                        }
+                    ],
+                    
+                    data: {
+                        url: '/vue-pwa-sample/',
+                        timestamp: Date.now(),
+                        urgency: 'high'
+                    }
                 });
-                updateStatus('✅ テスト通知を送信しました', 'success');
+                
+                updateStatus('✅ 強化された通知を送信しました', 'success');
             }
         } catch (error) {
             console.error('通知送信エラー:', error);
@@ -328,6 +362,114 @@ if ('serviceWorker' in navigator) {
         console.log('Service Workerからのメッセージ:', event.data);
     });
 }
+
+    // 以下の関数を既存のscriptタグ内に追加してください
+
+// 緊急通知の送信関数（新規追加）
+async function sendUrgentNotification() {
+    if (!subscription) {
+        alert("📩 まず通知を購読してください！");
+        return;
+    }
+
+    try {
+        if (serviceWorkerRegistration) {
+            await serviceWorkerRegistration.showNotification('🚨 緊急通知！', {
+                body: '⚡ これは緊急度の高い通知です！\n🔔 即座に確認してください',
+                icon: '/vue-pwa-sample/icon-192.png',
+                badge: '/vue-pwa-sample/icon-192.png',
+                tag: 'urgent-notification-' + Date.now(),
+                
+                // 緊急度最大設定
+                requireInteraction: true,
+                silent: false,
+                vibrate: [500, 200, 500, 200, 500, 200, 500], // 激しいバイブレーション
+                urgency: 'high',
+                
+                // 目立つアクションボタン
+                actions: [
+                    {
+                        action: 'urgent_open',
+                        title: '🚨 今すぐ確認',
+                        icon: '/vue-pwa-sample/icon-192.png'
+                    },
+                    {
+                        action: 'dismiss',
+                        title: '❌ 却下',
+                        icon: '/vue-pwa-sample/icon-192.png'
+                    }
+                ],
+                
+                data: {
+                    url: '/vue-pwa-sample/',
+                    timestamp: Date.now(),
+                    urgency: 'urgent',
+                    type: 'emergency'
+                }
+            });
+            
+            updateStatus('🚨 緊急通知を送信しました', 'success');
+        }
+    } catch (error) {
+        console.error('緊急通知送信エラー:', error);
+        updateStatus(`❌ 緊急通知送信エラー: ${error.message}`, 'error');
+    }
+}
+
+// 連続通知の送信関数（新規追加）
+async function sendRepeatedNotifications() {
+    if (!subscription) {
+        alert("📩 まず通知を購読してください！");
+        return;
+    }
+
+    const count = 3; // 3回繰り返し
+    const interval = 2000; // 2秒間隔
+    
+    updateStatus(`🔄 ${count}回の連続通知を送信します...`, 'info');
+
+    for (let i = 1; i <= count; i++) {
+        setTimeout(async () => {
+            try {
+                if (serviceWorkerRegistration) {
+                    await serviceWorkerRegistration.showNotification(`📢 通知 ${i}/${count}`, {
+                        body: `🔔 これは${i}回目の通知です（全${count}回）\n📱 重要な情報をお知らせします`,
+                        icon: '/vue-pwa-sample/icon-192.png',
+                        badge: '/vue-pwa-sample/icon-192.png',
+                        tag: 'repeated-notification-' + i + '-' + Date.now(),
+                        
+                        requireInteraction: i === count, // 最後の通知のみ操作が必要
+                        silent: false,
+                        vibrate: [200, 100, 200], // 短めのバイブレーション
+                        urgency: i === count ? 'high' : 'normal',
+                        
+                        actions: i === count ? [
+                            {
+                                action: 'complete',
+                                title: '✅ 確認完了',
+                                icon: '/vue-pwa-sample/icon-192.png'
+                            }
+                        ] : undefined,
+                        
+                        data: {
+                            url: '/vue-pwa-sample/',
+                            sequence: i,
+                            total: count,
+                            timestamp: Date.now()
+                        }
+                    });
+                }
+            } catch (error) {
+                console.error(`通知${i}送信エラー:`, error);
+            }
+        }, (i - 1) * interval);
+    }
+    
+    setTimeout(() => {
+        updateStatus('✅ 連続通知の送信が完了しました', 'success');
+    }, count * interval + 500);
+}
+    
 </script>
 </body>
 </html>
