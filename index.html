@@ -128,10 +128,22 @@
 
     <div class="control-group">
         <button id="subscribeBtn" onclick="subscribe()">🔔 通知を購読</button>
-        <button id="sendBtn" onclick="sendDelayedNotification()">📩 通知を送信（ローカルのみ）</button>
-        <button id="testBtn" onclick="sendTestNotification()">🧪 テスト通知</button>
         <button id="installBtn">📲 アプリをインストール</button>
     </div>
+
+    <div class="control-group">
+        <h4>🔔 強化された通知テスト:</h4>
+        <button id="testBtn" onclick="sendTestNotification()">🧪 強化テスト通知</button>
+        <button id="urgentBtn" onclick="sendUrgentNotification()" style="background-color: #f44336;">🚨 緊急通知</button>
+        <button id="repeatedBtn" onclick="sendRepeatedNotifications()" style="background-color: #ff9800;">🔄 連続通知</button>
+    </div>
+
+    <div class="control-group">
+        <h4>⚠️ 従来の通知:</h4>
+        <button id="sendBtn" onclick="sendDelayedNotification()">📩 通知を送信（ローカルのみ）</button>
+    </div>
+
+    
 
     <div class="control-group">
         <label>購読情報:</label>
