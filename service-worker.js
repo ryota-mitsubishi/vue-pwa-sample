@@ -23,8 +23,8 @@ self.addEventListener('push', event => {
 
   const options = {
     body: data.body,
-    icon: './icon-192.png',
-    badge: './icon-192.png',
+    icon: '/vue-pwa-sample/icon-192.png',     // 絶対パスに修正
+    badge: '/vue-pwa-sample/icon-192.png',    // 絶対パスに修正
     image: data.image || undefined,
     tag: 'push-demo',
     requireInteraction: true
