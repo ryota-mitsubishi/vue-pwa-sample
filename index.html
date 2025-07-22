@@ -4,9 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PWA Push通知デモ</title>
-    <link rel="manifest" href="./manifest.json">
+    <link rel="manifest" href="/vue-pwa-sample/manifest.json">
     <meta name="theme-color" content="#2196f3">
-    <link rel="icon" href="./icon-192.png" type="image/png">
+    <link rel="icon" href="/vue-pwa-sample/icon-192.png" type="image/png">
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -192,7 +192,7 @@ async function subscribe() {
         
         // Service Workerの登録
         if (!serviceWorkerRegistration) {
-            serviceWorkerRegistration = await navigator.serviceWorker.register('./service-worker.js');
+            serviceWorkerRegistration = await navigator.serviceWorker.register('/vue-pwa-sample/service-worker.js');
             console.log('✅ Service Worker registered:', serviceWorkerRegistration);
         }
         
@@ -247,8 +247,8 @@ async function sendTestNotification() {
             if (serviceWorkerRegistration) {
                 await serviceWorkerRegistration.showNotification(`${delay}秒後のテスト通知`, {
                     body: `これは${delay}秒後に送られたローカルテスト通知です📲`,
-                    icon: './icon-192.png',
-                    badge: './icon-192.png',
+                    icon: '/vue-pwa-sample/icon-192.png',
+                    badge: '/vue-pwa-sample/icon-192.png',
                     tag: 'test-notification'
                 });
                 updateStatus('✅ テスト通知を送信しました', 'success');
