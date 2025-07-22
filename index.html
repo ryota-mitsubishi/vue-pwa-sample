@@ -4,9 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PWA Push通知デモ</title>
+    
+    <!-- マニフェストファイルの絶対パス指定 -->
     <link rel="manifest" href="/vue-pwa-sample/manifest.json">
     <meta name="theme-color" content="#2196f3">
     <link rel="icon" href="/vue-pwa-sample/icon-192.png" type="image/png">
+    
+    <!-- PWA用メタタグ -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="PushDemo">
+    <link rel="apple-touch-icon" href="/vue-pwa-sample/icon-192.png">
+    
     <style>
         body {
             font-family: Arial, sans-serif;
