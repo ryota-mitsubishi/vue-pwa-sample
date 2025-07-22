@@ -4,9 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PWA Push通知デモ</title>
-    <link rel="manifest" href="/manifest.json">
+    <link rel="manifest" href="./manifest.json">
     <meta name="theme-color" content="#2196f3">
-    <link rel="icon" href="/icon-192.png" type="image/png">
+    <link rel="icon" href="./icon-192.png" type="image/png">
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -87,6 +87,21 @@
             color: #666;
             margin-top: 20px;
         }
+        .warning {
+            background-color: #fff3cd;
+            border-color: #ffc107;
+            color: #856404;
+        }
+        .success {
+            background-color: #d4edda;
+            border-color: #28a745;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            border-color: #dc3545;
+            color: #721c24;
+        }
     </style>
 </head>
 <body>
@@ -103,8 +118,9 @@
     </div>
 
     <div class="control-group">
-        <button onclick="subscribe()">🔔 通知を購読</button>
-        <button onclick="sendDelayedNotification()">📩 通知を送信</button>
+        <button id="subscribeBtn" onclick="subscribe()">🔔 通知を購読</button>
+        <button id="sendBtn" onclick="sendDelayedNotification()">📩 通知を送信（ローカルのみ）</button>
+        <button id="testBtn" onclick="sendTestNotification()">🧪 テスト通知</button>
         <button id="installBtn">📲 アプリをインストール</button>
     </div>
 
@@ -117,40 +133,192 @@
         <h4>デバッグ情報:</h4>
         <div id="debugInfo">読み込み中...</div>
     </div>
+
+    <div class="debug-info">
+        <h4>注意事項:</h4>
+        <ul>
+            <li>GitHub Pagesではサーバーサイドの処理ができないため、実際のプッシュ通知送信は制限されます</li>
+            <li>「テスト通知」ボタンはService Worker経由でローカル通知を表示します</li>
+            <li>完全な機能を使用するにはサーバーサイド環境が必要です</li>
+        </ul>
+    </div>
 </div>
 
 <script>
-    // デバッグ情報を表示
-    function updateDebugInfo() {
-        const debugInfo = document.getElementById('debugInfo');
-        debugInfo.innerHTML = `
-            <strong>URL:</strong> ${window.location.href}<br>
-            <strong>User Agent:</strong> ${navigator.userAgent}<br>
-            <strong>Service Worker対応:</strong> ${'serviceWorker' in navigator ? '✅' : '❌'}<br>
-            <strong>Push通知対応:</strong> ${'PushManager' in window ? '✅' : '❌'}<br>
-            <strong>通知許可状態:</strong> ${Notification.permission}<br>
-            <strong>接続:</strong> ${location.protocol === 'https:' ? 'HTTPS ✅' : 'HTTP ⚠️'}<br>
-            <strong>ホスト:</strong> ${location.hostname}
-        `;
+const vapidPublicKey = 'BHMLj0JRh9dR1W8fR5GrlPyTHbHt7vohRhArEqGfXfDANtFZCIusKt27lgtTVt2ryj0IFc3rlNMt8UatZEEvnEg';
+let subscription = null;
+let deferredPrompt = null;
+let serviceWorkerRegistration = null;
+
+function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+    return new Uint8Array([...window.atob(base64)].map(c => c.charCodeAt(0)));
+}
+
+// デバッグ情報を表示
+function updateDebugInfo() {
+    const debugInfo = document.getElementById('debugInfo');
+    debugInfo.innerHTML = `
+        <strong>URL:</strong> ${window.location.href}<br>
+        <strong>User Agent:</strong> ${navigator.userAgent}<br>
+        <strong>Service Worker対応:</strong> ${'serviceWorker' in navigator ? '✅' : '❌'}<br>
+        <strong>Push通知対応:</strong> ${'PushManager' in window ? '✅' : '❌'}<br>
+        <strong>通知許可状態:</strong> ${Notification.permission}<br>
+        <strong>接続:</strong> ${location.protocol === 'https:' ? 'HTTPS ✅' : 'HTTP ⚠️'}<br>
+        <strong>ホスト:</strong> ${location.hostname}
+    `;
+}
+
+function updateStatus(message, type = 'info') {
+    const statusElement = document.getElementById('statusMessage');
+    statusElement.innerHTML = message;
+    
+    // クラスをリセット
+    statusElement.classList.remove('warning', 'success', 'error');
+    
+    if (type === 'warning') {
+        statusElement.classList.add('warning');
+    } else if (type === 'success') {
+        statusElement.classList.add('success');
+    } else if (type === 'error') {
+        statusElement.classList.add('error');
+    }
+}
+
+async function subscribe() {
+    try {
+        updateStatus('🔄 Service Workerを登録中...', 'info');
+        
+        // Service Workerの登録
+        if (!serviceWorkerRegistration) {
+            serviceWorkerRegistration = await navigator.serviceWorker.register('./service-worker.js');
+            console.log('✅ Service Worker registered:', serviceWorkerRegistration);
+        }
+        
+        updateStatus('🔔 通知許可を確認中...', 'info');
+        
+        // 通知許可の取得
+        const permission = await Notification.requestPermission();
+        console.log('通知許可状態:', permission);
+        
+        if (permission !== 'granted') {
+            updateStatus('❌ 通知が許可されていません', 'error');
+            alert('通知が許可されていません。ブラウザの設定で通知を許可してください。');
+            return;
+        }
+        
+        updateStatus('📝 プッシュ通知を購読中...', 'info');
+        
+        // プッシュ通知の購読
+        subscription = await serviceWorkerRegistration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(vapidPublicKey)
+        });
+        
+        console.log('✅ Push subscription:', subscription);
+        document.getElementById('output').textContent = JSON.stringify(subscription, null, 2);
+        updateStatus('✅ プッシュ通知の購読に成功しました！', 'success');
+        
+        // ボタンの状態を更新
+        document.getElementById('subscribeBtn').textContent = '✅ 購読済み';
+        document.getElementById('subscribeBtn').disabled = true;
+        
+    } catch (error) {
+        console.error('❌ 購読エラー:', error);
+        updateStatus(`❌ エラー: ${error.message}`, 'error');
+        alert(`エラーが発生しました: ${error.message}`);
+    }
+}
+
+async function sendTestNotification() {
+    if (!subscription) {
+        alert("📩 まず通知を購読してください！");
+        return;
     }
 
-    // 初期化
-    window.addEventListener('load', () => {
-        updateDebugInfo();
-
-        const statusMessage = document.getElementById('statusMessage');
-
-        if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
-            statusMessage.innerHTML = '⚠️ ChromeではHTTPS接続またはlocalhostが必要です';
-            statusMessage.style.backgroundColor = '#fff3cd';
-            statusMessage.style.borderColor = '#ffc107';
-        } else {
-            statusMessage.innerHTML = '✅ 準備完了 - 通知を購読してください';
-            statusMessage.style.backgroundColor = '#d4edda';
-            statusMessage.style.borderColor = '#28a745';
+    const delay = parseInt(document.getElementById('delaySeconds').value) || 5;
+    
+    updateStatus(`⏱️ ${delay}秒後にテスト通知を送信します...`, 'info');
+    
+    setTimeout(async () => {
+        try {
+            // Service Worker経由で通知を表示
+            if (serviceWorkerRegistration) {
+                await serviceWorkerRegistration.showNotification(`${delay}秒後のテスト通知`, {
+                    body: `これは${delay}秒後に送られたローカルテスト通知です📲`,
+                    icon: './icon-192.png',
+                    badge: './icon-192.png',
+                    tag: 'test-notification'
+                });
+                updateStatus('✅ テスト通知を送信しました', 'success');
+            }
+        } catch (error) {
+            console.error('通知送信エラー:', error);
+            updateStatus(`❌ 通知送信エラー: ${error.message}`, 'error');
         }
+    }, delay * 1000);
+}
+
+function sendDelayedNotification() {
+    if (!subscription) {
+        alert("📩 まず通知を購読してください！");
+        return;
+    }
+
+    const delay = parseInt(document.getElementById('delaySeconds').value) || 5;
+    
+    // GitHub Pagesではサーバーサイド処理ができないことを説明
+    alert(`⚠️ GitHub Pagesでは実際のプッシュサーバー機能は利用できません。\n\n代わりに「テスト通知」ボタンを使用してください。\n\n完全な機能を使用するには、Node.jsやPython等のサーバーサイド環境が必要です。`);
+}
+
+// PWA インストール用ロジック
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    document.getElementById('installBtn').style.display = 'inline-block';
+});
+
+document.getElementById('installBtn').addEventListener('click', async () => {
+    if (deferredPrompt) {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        console.log(`ユーザーの選択: ${outcome}`);
+        deferredPrompt = null;
+        document.getElementById('installBtn').style.display = 'none';
+    }
+});
+
+// 初期化
+window.addEventListener('load', async () => {
+    updateDebugInfo();
+
+    if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
+        updateStatus('⚠️ ChromeではHTTPS接続またはlocalhostが必要です', 'warning');
+    } else {
+        updateStatus('✅ 準備完了 - 通知を購読してください', 'success');
+    }
+    
+    // Service Workerが既に登録されているかチェック
+    if ('serviceWorker' in navigator) {
+        try {
+            const registration = await navigator.serviceWorker.getRegistration();
+            if (registration) {
+                serviceWorkerRegistration = registration;
+                console.log('既存のService Worker found:', registration);
+            }
+        } catch (error) {
+            console.log('Service Worker check error:', error);
+        }
+    }
+});
+
+// Service Workerの状態変更をリッスン
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.addEventListener('message', event => {
+        console.log('Service Workerからのメッセージ:', event.data);
     });
+}
 </script>
-<script src="/main.js"></script>
 </body>
 </html>
